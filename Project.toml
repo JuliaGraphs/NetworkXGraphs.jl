@@ -1,0 +1,13 @@
+name = "NetworkX"
+uuid = "7cfbcbcf-cd41-4fe6-b90f-527da21b4c9a"
+version = "0.1.0"
+authors = ["Jash <jashambaliya1@gmail.com>"]
+
+[deps]
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+
+[compat]
+Graphs = "1"
+PythonCall = "0.9"
+julia = "1.10"
