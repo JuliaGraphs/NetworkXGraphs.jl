@@ -1,6 +1,6 @@
 using Test
 using CondaPkg
-using Base.Threads: @threads, nthreads, threadid
+using Base.Threads: nthreads
 
 CondaPkg.add("networkx")
 CondaPkg.resolve()
@@ -50,31 +50,25 @@ using PythonCall
 
     @testset "Threaded isolation" begin
         if nthreads() > 1
-            results = Vector{Bool}(undef, nthreads())
-            @threads for _ in 1:nthreads()
-                try
-                    nx_local = pyimport("networkx")
-                    ok = true
-                    for i in 1:50
-                        pyg = nx_local.Graph()
-                        pyg.add_edges_from([(1, 2), (2, 3), (3, 4), (4, 5), (5, 5 + i)])
-                        gw = wrap_networkx(pyg)
-                        ok &= nv(gw) == 6
-                        ok &= ne(gw) == 5
-                        ok &= has_edge(gw, 1, 2)
-                        ok &= !is_directed(gw)
+            results = fill(false, 2 * nthreads())
+            PythonCall.GIL.@unlock Threads.@threads for i in eachindex(results)
+                pyg = PythonCall.GIL.@lock nx.Graph()
+                PythonCall.GIL.@lock pyg.add_edges_from([(1, 2), (2, 3), (3, 4), (4, 5), (5, 5 + i)])
+                gw = PythonCall.GIL.@lock wrap_networkx(pyg)
+                ok = gw isa NetworkXGraph
+                ok &= PythonCall.GIL.@lock nv(gw) == 6
+                ok &= PythonCall.GIL.@lock ne(gw) == 5
+                ok &= PythonCall.GIL.@lock has_edge(gw, 1, 2)
+                ok &= !PythonCall.GIL.@lock is_directed(gw)
 
-                        pydg = nx_local.DiGraph()
-                        pydg.add_edges_from([(1, 2), (2, 3), (3, 1)])
-                        dgw = wrap_networkx(pydg)
-                        ok &= is_directed(dgw)
-                        ok &= outneighbors(dgw, 2) == [3]
-                        ok &= inneighbors(dgw, 2) == [1]
-                    end
-                    results[threadid()] = ok
-                catch
-                    results[threadid()] = false
-                end
+                pydg = PythonCall.GIL.@lock nx.DiGraph()
+                PythonCall.GIL.@lock pydg.add_edges_from([(1, 2), (2, 3), (3, 1)])
+                dgw = PythonCall.GIL.@lock wrap_networkx(pydg)
+                ok &= dgw isa NetworkXDiGraph
+                ok &= PythonCall.GIL.@lock is_directed(dgw)
+                ok &= PythonCall.GIL.@lock outneighbors(dgw, 2) == [3]
+                ok &= PythonCall.GIL.@lock inneighbors(dgw, 2) == [1]
+                results[i] = ok
             end
             @test all(results)
         else
