@@ -37,7 +37,8 @@ jobs:
       - name: Strip JET from test deps (pre-release only)
         if: matrix.version == 'pre'
         run: |
-          sed -i '/^JET /d' test/Project.toml
+          sed -i.bak '/^JET /d' test/Project.toml
+          rm -f test/Project.toml.bak
         shell: bash
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
