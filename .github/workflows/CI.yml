@@ -33,7 +33,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - name: Strip JET from test deps (pre-release only)
         if: matrix.version == 'pre'
         run: |
