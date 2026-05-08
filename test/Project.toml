@@ -2,6 +2,7 @@
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+GraphsMatching = "c3af3a8c-b79e-4b01-bf44-c718d7e0e0d6"
 GraphsInterfaceChecker = "3bef136c-15ff-4091-acbb-1a4aafe67608"
 Interfaces = "85a1e053-f937-4924-92a5-1367d23b7b87"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"

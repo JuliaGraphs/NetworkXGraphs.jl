@@ -40,4 +40,5 @@ nv(gw2) == nv(g)                # true
 
 ## Notes
 
-- No graph algorithms are implemented in this package at this stage.
+- Optional package extensions expose NetworkX-backed algorithms without adding hard dependencies to the base package.
+- With `GraphsMatching.jl` installed, `minimum_weight_perfect_matching(g, weights, NXAlgorithm())` dispatches to NetworkX for exact integer-weight matching; floating-point weights follow GraphsMatching's existing integer-rescaling behavior before calling the backend.

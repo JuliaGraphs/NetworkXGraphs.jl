@@ -4,6 +4,7 @@ using Base.Threads: nthreads
 using Aqua
 using ExplicitImports
 using Graphs
+using GraphsMatching
 using GraphsInterfaceChecker
 using Interfaces
 if isempty(VERSION.prerelease)
@@ -137,5 +138,54 @@ using PythonCall
         gw = NetworkXGraph(nx.path_graph(3))
         @test !add_edge!(gw, 1, 2)
         @test ne(gw) == 2
+    end
+
+    @testset "GraphsMatching extension" begin
+        @test Base.get_extension(NetworkXGraphs, :NetworkXGraphsGraphsMatchingExt) !== nothing
+
+        g = complete_graph(4)
+        w = Dict(
+            Edge(1, 2) => 500,
+            Edge(1, 3) => 400,
+            Edge(1, 4) => 900,
+            Edge(2, 3) => 900,
+            Edge(2, 4) => 1000,
+            Edge(3, 4) => 1000,
+        )
+        match = minimum_weight_perfect_matching(g, w, NXAlgorithm())
+        @test match isa MatchingResult{Int}
+        @test match.mate == [3, 4, 1, 2]
+        @test match.weight == 1400
+        @test match.mate isa Vector{Int}
+
+        g_float = complete_graph(4)
+        w_float = Dict{Edge,Float64}()
+        w_float[Edge(1, 3)] = 10.0
+        w_float[Edge(1, 4)] = 0.5
+        w_float[Edge(2, 3)] = 11.0
+        w_float[Edge(2, 4)] = 2.0
+        w_float[Edge(1, 2)] = 100.0
+        match_float = minimum_weight_perfect_matching(g_float, w_float, 50, NXAlgorithm())
+        @test match_float isa MatchingResult{Float64}
+        @test match_float.mate == [4, 3, 2, 1]
+        @test match_float.weight ≈ 11.5
+
+        pyg = nx.Graph()
+        pyg.add_edges_from([(10, 20), (10, 30), (10, 40), (20, 30), (20, 40), (30, 40)])
+        wrapped = NetworkXGraph(pyg)
+        w_wrapped = Dict(
+            Edge(1, 2) => 9,
+            Edge(1, 3) => 9,
+            Edge(1, 4) => 1,
+            Edge(2, 3) => 2,
+            Edge(2, 4) => 9,
+            Edge(3, 4) => 9,
+        )
+        match_wrapped = minimum_weight_perfect_matching(wrapped, w_wrapped, NXAlgorithm())
+        @test match_wrapped isa MatchingResult{Int}
+        @test match_wrapped.mate == [4, 3, 2, 1]
+        @test match_wrapped.weight == 3
+        @test pyconvert(Int, pyg.number_of_edges()) == 6
+        @test isempty(pyconvert(Dict{String,Any}, pyg.get_edge_data(10, 20)))
     end
 end
