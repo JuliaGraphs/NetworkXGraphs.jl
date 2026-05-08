@@ -65,13 +65,14 @@ using PythonCall
         @test has_edge(gw2, 2, 3)
     end
 
-
     @testset "Threaded isolation" begin
         if nthreads() > 1
             results = fill(false, 2 * nthreads())
             PythonCall.GIL.@unlock Threads.@threads for i in eachindex(results)
                 pyg = PythonCall.GIL.@lock nx.Graph()
-                PythonCall.GIL.@lock pyg.add_edges_from([(1, 2), (2, 3), (3, 4), (4, 5), (5, 5 + i)])
+                PythonCall.GIL.@lock pyg.add_edges_from([
+                    (1, 2), (2, 3), (3, 4), (4, 5), (5, 5 + i)
+                ])
                 gw = PythonCall.GIL.@lock NetworkXGraph(pyg)
                 ok = gw isa NetworkXGraph
                 ok &= PythonCall.GIL.@lock nv(gw) == 6
@@ -141,7 +142,8 @@ using PythonCall
     end
 
     @testset "GraphsMatching extension" begin
-        @test Base.get_extension(NetworkXGraphs, :NetworkXGraphsGraphsMatchingExt) !== nothing
+        @test Base.get_extension(NetworkXGraphs, :NetworkXGraphsGraphsMatchingExt) !==
+            nothing
 
         g = complete_graph(4)
         w = Dict(

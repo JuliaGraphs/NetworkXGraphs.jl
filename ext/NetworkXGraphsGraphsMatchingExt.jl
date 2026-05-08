@@ -2,24 +2,27 @@ module NetworkXGraphsGraphsMatchingExt
 
 using NetworkXGraphs
 using PythonCall: pybuiltins, pyconvert
-import Graphs
-import GraphsMatching
+using Graphs: Graphs
+using GraphsMatching: GraphsMatching
 
 const _NX_WEIGHT_KEY = "weight"
 
 _label_for_vertex(g::NetworkXGraphs.AbstractNetworkXGraph, v::Integer) = g.nodes[Int(v)]
 _label_for_vertex(::Graphs.AbstractGraph, v::Integer) = Int(v)
 
-_index_for_label(g::NetworkXGraphs.AbstractNetworkXGraph, label) = Int(g.node_to_index[label])
+function _index_for_label(g::NetworkXGraphs.AbstractNetworkXGraph, label)
+    Int(g.node_to_index[label])
+end
 _index_for_label(::Graphs.AbstractGraph, label) = Int(label)
 
-function _lookup_weight(w::Dict{E,U}, ::Type{E}, i::Integer, j::Integer) where {E<:Graphs.AbstractEdge,U}
+function _lookup_weight(
+    w::Dict{E,U}, ::Type{E}, i::Integer, j::Integer
+) where {E<:Graphs.AbstractEdge,U}
     return get(w, E(i, j), get(w, E(j, i), zero(U)))
 end
 
 function _matching_weighted_edges(
-    g::Graphs.AbstractGraph,
-    w::Dict{E,U},
+    g::Graphs.AbstractGraph, w::Dict{E,U}
 ) where {E<:Graphs.AbstractEdge,U<:Real}
     weighted = Tuple{Any,Any,U}[]
     keep = Set{Tuple{Any,Any}}()
@@ -37,8 +40,7 @@ function _matching_weighted_edges(
 end
 
 function _networkx_matching_graph(
-    g::NetworkXGraphs.AbstractNetworkXGraph,
-    w::Dict{E,U},
+    g::NetworkXGraphs.AbstractNetworkXGraph, w::Dict{E,U}
 ) where {E<:Graphs.AbstractEdge,U<:Real}
     pyg = g.pygraph.copy()
     weighted, keep = _matching_weighted_edges(g, w)
@@ -50,8 +52,7 @@ function _networkx_matching_graph(
 end
 
 function _networkx_matching_graph(
-    g::Graphs.AbstractGraph,
-    w::Dict{E,U},
+    g::Graphs.AbstractGraph, w::Dict{E,U}
 ) where {E<:Graphs.AbstractEdge,U<:Real}
     pyg = NetworkXGraphs.networkx_graph(g)
     weighted, keep = _matching_weighted_edges(g, w)
@@ -63,12 +64,10 @@ function _networkx_matching_graph(
 end
 
 function _matching_result(
-    g::Graphs.AbstractGraph,
-    w::Dict{E,U},
-    pyg,
+    g::Graphs.AbstractGraph, w::Dict{E,U}, pyg
 ) where {E<:Graphs.AbstractEdge,U<:Integer}
     nx = NetworkXGraphs.PythonNetworkX.networkx
-    pymatching = nx.algorithms.matching.min_weight_matching(pyg, weight=_NX_WEIGHT_KEY)
+    pymatching = nx.algorithms.matching.min_weight_matching(pyg; weight=_NX_WEIGHT_KEY)
     pyconvert(Bool, nx.algorithms.matching.is_perfect_matching(pyg, pymatching)) || throw(
         ErrorException(
             "NetworkX's minimum-weight matching backend did not produce a perfect matching for this graph.",
@@ -88,11 +87,12 @@ function _matching_result(
 end
 
 function _minimum_weight_perfect_matching(
-    g::Graphs.AbstractGraph,
-    w::Dict{E,U},
+    g::Graphs.AbstractGraph, w::Dict{E,U}
 ) where {E<:Graphs.AbstractEdge,U<:Integer}
     Graphs.is_directed(g) && throw(
-        ArgumentError("`NXAlgorithm()` only supports undirected graphs for minimum-weight perfect matching."),
+        ArgumentError(
+            "`NXAlgorithm()` only supports undirected graphs for minimum-weight perfect matching.",
+        ),
     )
     return _matching_result(g, w, _networkx_matching_graph(g, w))
 end
@@ -101,7 +101,7 @@ function GraphsMatching.minimum_weight_perfect_matching(
     g::Graphs.AbstractGraph,
     w::Dict{E,U},
     cutoff::Real,
-    algorithm::NetworkXGraphs.NXAlgorithm = NetworkXGraphs.NXAlgorithm();
+    algorithm::NetworkXGraphs.NXAlgorithm=NetworkXGraphs.NXAlgorithm();
     kws...,
 ) where {E<:Graphs.AbstractEdge,U<:Real}
     wnew = Dict{E,U}()
@@ -115,7 +115,7 @@ end
 function GraphsMatching.minimum_weight_perfect_matching(
     g::Graphs.AbstractGraph,
     w::Dict{E,U},
-    algorithm::NetworkXGraphs.NXAlgorithm = NetworkXGraphs.NXAlgorithm();
+    algorithm::NetworkXGraphs.NXAlgorithm=NetworkXGraphs.NXAlgorithm();
     tmaxscale=10.0,
 ) where {E<:Graphs.AbstractEdge,U<:AbstractFloat}
     wnew = Dict{E,Int32}()
@@ -137,17 +137,13 @@ function GraphsMatching.minimum_weight_perfect_matching(
 end
 
 function GraphsMatching.minimum_weight_perfect_matching(
-    g::Graphs.AbstractGraph,
-    w::Dict{E,U},
-    ::NetworkXGraphs.NXAlgorithm,
+    g::Graphs.AbstractGraph, w::Dict{E,U}, ::NetworkXGraphs.NXAlgorithm
 ) where {E<:Graphs.AbstractEdge,U<:Integer}
     return _minimum_weight_perfect_matching(g, w)
 end
 
 function GraphsMatching.minimum_weight_perfect_matching(
-    g::Graphs.SimpleGraph,
-    w::Dict{E,U},
-    algorithm::NetworkXGraphs.NXAlgorithm,
+    g::Graphs.SimpleGraph, w::Dict{E,U}, algorithm::NetworkXGraphs.NXAlgorithm
 ) where {E<:Graphs.AbstractEdge,U<:Integer}
     return _minimum_weight_perfect_matching(g, w)
 end
@@ -156,21 +152,18 @@ function GraphsMatching.minimum_weight_perfect_matching(
     g::Graphs.SimpleGraph,
     w::Dict{E,U},
     cutoff::Real,
-    algorithm::NetworkXGraphs.NXAlgorithm = NetworkXGraphs.NXAlgorithm();
+    algorithm::NetworkXGraphs.NXAlgorithm=NetworkXGraphs.NXAlgorithm();
     kws...,
 ) where {E<:Graphs.AbstractEdge,U<:Real}
     return GraphsMatching.minimum_weight_perfect_matching(
-        g,
-        Dict{E,U}(e => c for (e, c) in w if c <= cutoff),
-        algorithm;
-        kws...,
+        g, Dict{E,U}(e => c for (e, c) in w if c <= cutoff), algorithm; kws...
     )
 end
 
 function GraphsMatching.minimum_weight_perfect_matching(
     g::Graphs.SimpleGraph,
     w::Dict{E,U},
-    algorithm::NetworkXGraphs.NXAlgorithm = NetworkXGraphs.NXAlgorithm();
+    algorithm::NetworkXGraphs.NXAlgorithm=NetworkXGraphs.NXAlgorithm();
     tmaxscale=10.0,
 ) where {E<:Graphs.AbstractEdge,U<:AbstractFloat}
     wnew = Dict{E,Int32}()
